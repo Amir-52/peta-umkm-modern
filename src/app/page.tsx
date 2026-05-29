@@ -1,8 +1,9 @@
 // src/app/page.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react'; // Pastikan useEffect diimport
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { hitungJarak } from '@/lib/jarak';
 
 const PetaInteraktif = dynamic(() => import('@/components/Map'), 
   { 
@@ -14,9 +15,8 @@ const PetaInteraktif = dynamic(() => import('@/components/Map'),
     ),
   });
 
-// Sesuaikan interface dengan format data asli MongoDB (_id)
 interface UMKM {
-  _id: string; // Menggunakan string _id dari MongoDB
+  _id: string;
   nama: string;
   kategori: string;
   alamat: string;
@@ -28,7 +28,7 @@ export default function PetaUMKMPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [kategoriAktif, setKategoriAktif] = useState<string>("Semua Kategori");
   const [koordinatZoom, setKoordinatZoom] = useState<[number, number] | null>(null);
-  const [kataKunci, setKataKunci] = useState<string>(""); // kotak pencarian
+  const [kataKunci, setKataKunci] = useState<string>("");
   const [tampilForm, setTampilForm] = useState<boolean>(false);
   const [loadingSubmit, setLoadingSubmit] = useState<boolean>(false);
   const [formInput, setFormInput] = useState({
@@ -38,6 +38,7 @@ export default function PetaUMKMPage() {
     lat:"",
     lng: ""
   });
+  const [koordinatUserGlobal, setKoordinatUserGlobal] = useState<[number, number] | null>(null); 
 
   const ambilDataDatabase = async () => {
     try {
@@ -52,7 +53,6 @@ export default function PetaUMKMPage() {
     }
   };
 
-  // --- Menambahkan useEffect agar fungsi di atas otomatis berjalan ---
   useEffect(() => {
     ambilDataDatabase();
   }, []);
@@ -91,11 +91,8 @@ export default function PetaUMKMPage() {
   };
 
   const dataDifilter = dataUMKM.filter((umkm) => {
-    // Cek kecocokan kategori
     const cocokKategori = kategoriAktif === "Semua Kategori" || umkm.kategori === kategoriAktif;
-    // Cek kecocokan teks nama (diubah ke huruf kecil semua supaya tidak sensitif huruf kapital)
     const cocokNama = umkm.nama.toLocaleLowerCase().includes(kataKunci.toLocaleLowerCase());
-    // Data lolos jika memenihi dua syarat diatas
     return cocokKategori && cocokNama;
   });
 
@@ -120,7 +117,6 @@ export default function PetaUMKMPage() {
               {tampilForm ? "Kembali ke Daftar UMKM" : "➕ Tambah UMKM Baru"}
             </button>
 
-            {/* --- Memasukkan seluruh elemen daftar ke dalam blok pengkondisian --- */}
             {tampilForm ? (
               // --- Tampilan Formulir ---
               <form onSubmit={tanganiSubmit} className="space-y-4 bg-gray-50 p-4 rounded-xl border">
@@ -169,13 +165,14 @@ export default function PetaUMKMPage() {
               // --- Tampilan Daftar UMKM & Filter Kategori ---
               <>
                 {/* Kotak Pencarian Baru */}
+                {/* Kotak Pencarian Baru */}
                 <div className="mb-4">
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Cari Nama UMKM</label>
                   <div className="relative">
                     <input 
                       type="text"
                       placeholder="🔍 Ketik Nama Tempat... (misal: Soto)"
-                      className="w-full p-2.5 pl-9 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-500 focus:outline-none transitions-all text-black shadow-sm"
+                      className="w-full p-2.5 pl-9 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-black shadow-sm"
                       value={kataKunci}
                       onChange={(e) => setKataKunci(e.target.value)}
                     />
@@ -207,17 +204,36 @@ export default function PetaUMKMPage() {
                   ) : dataDifilter.length === 0 ? (
                     <p className="text-gray-400 italic text-sm">Tidak ada UMKM di kategori ini.</p>
                   ) : (
-                    dataDifilter.map((umkm) => (
-                      <div 
-                        key={umkm._id} // PERBAIKAN 2: Mengubah umkm.id menjadi umkm._id
-                        onClick={() => setKoordinatZoom(umkm.koordinat)}
-                        className="p-4 border rounded-xl hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-all border-gray-200 shadow-sm"
-                      >
-                        <h3 className="font-bold text-blue-800">{umkm.nama}</h3>
-                        <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded mt-1 uppercase">{umkm.kategori}</span>
-                        <p className="text-sm text-gray-600 mt-2">{umkm.alamat}</p>
-                      </div>
-                    ))
+                    dataDifilter.map((umkm) => {
+                      const jarakKeToko = koordinatUserGlobal ? hitungJarak(koordinatUserGlobal[0], koordinatUserGlobal[1], umkm.koordinat[0], umkm.koordinat[1]) : null;
+
+                      return (
+                        <div
+                          key={umkm._id}
+                          onClick={() => setKoordinatZoom(umkm.koordinat)}
+                          className="p-4 border rounded-xl hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-all border-gray-200 shadow-sm bg-white"
+                        >
+                          <div className="flex justify-between items-start">
+                            <h3 className="font-bold text-blue-800">{umkm.nama}</h3>
+
+                            {/* Tampilkan jarak meluncur jika GPS aktif */}
+                            {jarakKeToko !== null && (
+                              <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full animate-fade-in">
+                                🚗 {jarakKeToko} Km
+                              </span>
+                            )}
+                          </div>
+
+                          {/* PERBAIKAN: Ditambahkan strip pada text-blue-700 */}
+                          <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded mt-1 uppercase">
+                            {umkm.kategori}
+                          </span>
+                          <p className="text-sm text-gray-600 mt-2">
+                            {umkm.alamat}
+                          </p>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </>
@@ -226,7 +242,9 @@ export default function PetaUMKMPage() {
 
           {/* Kolom Kanan: Area Peta */}
           <section className="w-2/3 bg-blue-50 relative z-0">
-            <PetaInteraktif data={dataDifilter} koordinatZoom={koordinatZoom} />
+            <PetaInteraktif data={dataDifilter} koordinatZoom={koordinatZoom} 
+              onKirimLokasiKeHomePage={(koordinat) => setKoordinatUserGlobal(koordinat)} 
+            />
           </section>
 
         </div>
