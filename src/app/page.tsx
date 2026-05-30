@@ -39,6 +39,8 @@ export default function PetaUMKMPage() {
     lng: ""
   });
   const [koordinatUserGlobal, setKoordinatUserGlobal] = useState<[number, number] | null>(null); 
+  const [modaTransportasi, setModaTransportasi] = useState<string>("driving"); // Moda transportasi
+  const [estimasiWaktu,setEstimasiWaktu] = useState<{ [key: string]: string }>({}); // Estimasi waktu tempuh
 
   const ambilDataDatabase = async () => {
     try {
@@ -194,7 +196,37 @@ export default function PetaUMKMPage() {
                     ))}
                   </div>
                 </div>
-                
+
+                {/* Tombol Moda Transportasi */}
+                {koordinatUserGlobal && (
+                  <div className="mb-4 bg-gray-50 p-3 rounded-xl border">
+                    <label className="block text-xs text-gray-500 uppercase mb-2">Moda Transportasi</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button 
+                        type="button"
+                        onClick={() => setModaTransportasi("driving")}
+                        className={`py-2 text-xs font-bold rounded-lg transition-all ${modaTransportasi === "driving" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-600 border"}`}
+                        >
+                          🚗 Mobil                   
+                        </button>
+                        <button 
+                        type="button"
+                        onClick={() => setModaTransportasi("routing")}
+                        className={`py-2 text-xs font-bold rounded-lg transition-all ${modaTransportasi === "routing" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-600 border"}`}
+                        >
+                          🏍️ Motor                 
+                        </button>
+                        <button 
+                        type="button"
+                        onClick={() => setModaTransportasi("walking")}
+                        className={`py-2 text-xs font-bold rounded-lg transition-all ${modaTransportasi === "walking" ? "bg-blue-600 text-white shadow" : "bg-white text-gray-600 border"}`}
+                        >
+                          🚶🏻 Jalan Kaki                
+                        </button>
+                    </div>
+                  </div>
+                )}
+
                 <h2 className="text-lg font-bold text-gray-700 mb-3">UMKM Terdaftar ({dataDifilter.length})</h2>
 
                 {/* Bagian Daftar Kartu */}
@@ -218,9 +250,17 @@ export default function PetaUMKMPage() {
 
                             {/* Tampilkan jarak meluncur jika GPS aktif */}
                             {jarakKeToko !== null && (
-                              <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full animate-fade-in">
-                                🚗 {jarakKeToko} Km
-                              </span>
+                              <div>
+                                <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full animate-fade-in">
+                                  🚗 {jarakKeToko} Km
+                                </span>
+                                {/* Estmasi Waktu Tempuh */}
+                                {estimasiWaktu[umkm._id] && (
+                                  <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                    ⏱️ {estimasiWaktu[umkm._id]}
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
 
@@ -243,7 +283,9 @@ export default function PetaUMKMPage() {
           {/* Kolom Kanan: Area Peta */}
           <section className="w-2/3 bg-blue-50 relative z-0">
             <PetaInteraktif data={dataDifilter} koordinatZoom={koordinatZoom} 
-              onKirimLokasiKeHomePage={(koordinat) => setKoordinatUserGlobal(koordinat)} 
+            onKirimLokasiKeHomePage={(koordinat) => setKoordinatUserGlobal(koordinat)}
+            moda={modaTransportasi}
+            onUpdateWaktu={(id, waktu) => setEstimasiWaktu(prev => ({...prev, [id]: waktu}))} 
             />
           </section>
 

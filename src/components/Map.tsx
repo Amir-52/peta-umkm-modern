@@ -47,39 +47,87 @@ interface MapProps {
     koordinatZoom: [number, number] | null; // Menerima koordinat dari luar
     // --- Saluran untuk mengirim lokasi user ke halaman utama ---
     onKirimLokasiKeHomePage: (koordinat: [number, number] | null) => void;
+    moda: string;
+    onUpdateWaktu: (id: string, waktu: string) => void;
 }
 
 // Koomponen Logika untuk menggambar garis rute
-function KomponenRute({ dari, ke }: { dari: [number,number] | null; ke: [number, number] | null }) {
+function KomponenRute({ dari, ke, moda, idToko, onUpdateWaktu}: { dari: [number,number] | null; ke: [number, number] | null; moda: string; idToko :string | null; onUpdateWaktu: (id: string, waktu: string) => void }) {
     const map = useMap();
 
     useEffect(() => {
         if (!map || !dari || !ke) return;
 
-        // Membuat kontrol rute jalan
+        // --- PERBAIKAN UTAMA: Menggunakan penyesuaian profil OSRM resmi yang didukung server ---
+        let profilOSRM = "driving"; // default mobil
+        if (moda === "walking") profilOSRM = "foot"; // jalan kaki
+        if (moda === "routing") profilOSRM = "bicycle"; // kita pakai sepeda untuk simulasi rute alternatif motor
+
         const kontrolRute = (L as any).Routing.control({
             waypoints: [
                 L.latLng(dari[0], dari[1]), // Titik awal (User)
-                L.latLng(ke[0], ke[1]) // Titik Tujuan (UMKM)
-            ], 
+                L.latLng(ke[0], ke[1])      // Titik Tujuan (UMKM)
+            ],
+            // Gunakan konfigurasi serviceUrl standar dan arahkan profilnya secara dinamis
+            router: new (L as any).Routing.OSRMv1({
+                serviceUrl: "https://router.project-osrm.org/route/v1",
+                profile: profilOSRM
+            }),
             lineOptions: {
-                styles: [{ color: "#2563eb", weight: 5, opacity: 0.8 }], // Garis warna biru khas navigasi
+                styles: [{ color: moda === "walking" ? "#10b981" : "#2563eb", weight: 6, opacity: 0.8 }],
             },
-            createMarker: () => null, // Sembunyikan marker bawaan routing biar tidak tumpang tindih
-            addWaypoints: false, // Kunci rute agar tidak bisa digesr-geser manual oleh user
+            createMarker: () => null,
+            addWaypoints: false,
             routeWhileDragging: false,
             show: false,
             itinerary: false,
-            containerClassName: "hidden" // Memaksa kontainer teks tidak muncul
+            containerClassName: "hidden"
         }).addTo(map);
 
-        // Hapus garis rute lama jika user mengklik toko UMKM lain
+        // Menangkap data rute dan mengatasi error jika server OSRM sedang lambat
+        kontrolRute.on("routesfound", function (e: any) {
+            const rute = e.routes[0];
+            if (!rute || !rute.summary) return;
+
+            // 1. Ambil jarak asli dalam satuan Kilometer dari server
+            const totalMeter = rute.summary.totalDistance; 
+            const totalKm = totalMeter / 1000; 
+
+            // 2. Tentukan kecepatan rata-rata (Km/Jam) berdasarkan moda yang dipilih user
+            let kecepatanKmJam = 30; // Default Mobil: 30 km/jam
+            if (moda === "routing") kecepatanKmJam = 45; // Motor: 45 km/jam
+            if (moda === "walking") kecepatanKmJam = 5;   // Jalan Kaki: 5 km/jam
+
+            // 3. Rumus Fisika: Waktu = Jarak / Kecepatan (Ubah langsung ke satuan Menit)
+            let totalMenit = Math.round((totalKm / kecepatanKmJam) * 60);
+
+            // Antisipasi jika jarak terlalu dekat agar tidak memunculkan "0 Menit"
+            if (totalMenit < 1) totalMenit = 1; 
+            
+            // 4. Format tampilan teks waktu ke layar
+            let teksWaktu = `${totalMenit} Menit`;
+            if (totalMenit > 60) {
+                const jam = Math.floor(totalMenit / 60);
+                const sisaMenit = totalMenit % 60;
+                teksWaktu = `${jam} Jam ${sisaMenit} Menit`;
+            }
+
+            if (idToko) {
+                onUpdateWaktu(idToko, teksWaktu); // Kirim hasil kalkulasi akurat ke halaman utama
+            }
+        });
+
+        // --- BARU: Mencegah pop-up crash merah muncul di layar jika terjadi gangguan server ---
+        kontrolRute.on("routingerror", function (err: any) {
+            console.log("OSRM Routing temporary error atau rute tidak ditemukan:", err);
+        });
+
         return () => {
             if (map && kontrolRute) {
                 map.removeControl(kontrolRute);
             }
         };
-    }, [map, dari, ke]);
+    }, [map, dari, ke, moda, idToko]);
 
     return null;
 }
@@ -147,7 +195,7 @@ function TombolLokasiUser({ onLokasiDitemukan }: { onLokasiDitemukan: (koordinat
     );
 }
 
-export default function Map({ data, koordinatZoom, onKirimLokasiKeHomePage }: MapProps) {
+export default function Map({ data, koordinatZoom, onKirimLokasiKeHomePage, moda, onUpdateWaktu }: MapProps) {
     // Koordinat Pusat Peta (Bogor)
     const posisiPusat: [number, number] = [-6.595038, 106.789116];
 
@@ -186,7 +234,7 @@ export default function Map({ data, koordinatZoom, onKirimLokasiKeHomePage }: Ma
                 <MovePeta koordinat={koordinatZoom} />
 
                 {/* Garis Rute */}
-                <KomponenRute dari={lokasiUser} ke={koordinatZoom} />
+                <KomponenRute dari={lokasiUser} ke={koordinatZoom} moda={moda} idToko={data.find(u => u.koordinat[0] === koordinatZoom?.[0] && u.koordinat[1] === koordinatZoom?.[1])?._id || null} onUpdateWaktu={onUpdateWaktu} />
 
                 {/* Tombol GPS User */}
                 <TombolLokasiUser onLokasiDitemukan={(koordinat) => setLokasiUser(koordinat)} />
