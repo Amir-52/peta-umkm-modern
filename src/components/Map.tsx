@@ -186,9 +186,9 @@ function TombolLokasiUser({ onLokasiDitemukan }: { onLokasiDitemukan: (koordinat
                 className="bg-white hover:bg-gray-100 text-gray-800 font-bold p-3 rounded-full shadow-lg border border-gray-300 flex items-center justify-center transition-all group"
                 title="Cari Lokasi Saya">
                     {loadingGps ? (
-                        <span className="animate-spin inline-block w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-fill"></span>
+                        <span className="animate-spin inline-block w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full"></span>
                     ) : (
-                        <span className="text-xl group-hover:scale-110 transistion-transform">🎯</span>
+                        <span className="text-xl group-hover:scale-110 transition-transform">🎯</span>
                     )}
                 </button>
         </div>

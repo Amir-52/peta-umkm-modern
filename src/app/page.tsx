@@ -98,6 +98,16 @@ export default function PetaUMKMPage() {
     return cocokKategori && cocokNama;
   });
 
+  const dataDiurutkan = [...dataDifilter].sort((a, b) => {
+      const apakahAAktif = koordinatZoom && a.koordinat[0] === koordinatZoom[0] && a.koordinat[1] === koordinatZoom[1];
+      const apakahBAktif = koordinatZoom && b.koordinat[0] === koordinatZoom[0] && b.koordinat[1] === koordinatZoom[1];
+
+      if (apakahAAktif) return -1;
+      if (apakahBAktif) return 1;
+
+      return 0;
+  });
+
   const daftarKategori = ["Semua Kategori", "Kuliner", "Fashion", "Kerajinan", "Jasa"];
 
   return (
@@ -236,14 +246,16 @@ export default function PetaUMKMPage() {
                   ) : dataDifilter.length === 0 ? (
                     <p className="text-gray-400 italic text-sm">Tidak ada UMKM di kategori ini.</p>
                   ) : (
-                    dataDifilter.map((umkm) => {
+                    dataDiurutkan.map((umkm) => {
                       const jarakKeToko = koordinatUserGlobal ? hitungJarak(koordinatUserGlobal[0], koordinatUserGlobal[1], umkm.koordinat[0], umkm.koordinat[1]) : null;
+                      
+                      const apakahSedangDipilih = koordinatZoom && umkm.koordinat[0] === koordinatZoom[0] && umkm.koordinat[1] === koordinatZoom[1];
 
                       return (
                         <div
                           key={umkm._id}
                           onClick={() => setKoordinatZoom(umkm.koordinat)}
-                          className="p-4 border rounded-xl hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-all border-gray-200 shadow-sm bg-white"
+                          className={`p-4 border rounded-xl cursor-pointer transition-all shadow-sm ${apakahSedangDipilih ? "bg-blue-50 border-blue-500 ring-2 ring-blue-100" : "bg-white border-gray-200 hover:bg-gray-50 hover:border-blue-300"}`}
                         >
                           <div className="flex justify-between items-start">
                             <h3 className="font-bold text-blue-800">{umkm.nama}</h3>
