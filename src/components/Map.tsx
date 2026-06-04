@@ -40,6 +40,8 @@ interface UMKM {
     kategori: string;
     alamat: string;
     koordinat: [number, number];
+    foto?: string;
+    deskripsi?: string;
 }
 
 interface MapProps {
@@ -255,10 +257,23 @@ export default function Map({ data, koordinatZoom, onKirimLokasiKeHomePage, moda
                 {data.map((umkm) => (
                     <Marker key={umkm._id} position={umkm.koordinat} icon={getIkonKustom(umkm.kategori)}>
                         <Popup>
-                            <div className="p-1">
-                                <h3 className="font-bold text-sm text-blue-800">{umkm.nama}</h3>
-                                <p className="text-xs text-gray-500 m-0 font-semibold">{umkm.kategori}</p>
-                                <p className="text-xs text-gray-600 mt-1 m-0">{umkm.alamat}</p>
+                            <div className="w-48 p-0">
+                                <img
+                                    src={umkm.foto || "https://placehold.co/150x150/e2e8f0/475569?text=Tanpa+Foto"}
+                                    alt={umkm.nama}
+                                    className="w-full h-24 object-cover rounded-t-md mb-2"
+                                />
+                               <div className="px-1 pb-1">
+                                    <h3 className="font-bold text-sm text-blue-800 m-0">{umkm.nama}</h3>
+                                    <p className="inline-block text-[10px] px-1 py-0.5 bg-gray-100 text-blue-600 rounded-sm mt-1 mb-1 font-semibold border">
+                                        {umkm.kategori}
+                                    </p>
+
+                                    {umkm.deskripsi && (
+                                        <p className="text-xs text-gray-700 italic my-1 leading-snug">"{umkm.deskripsi}"</p>
+                                    )}
+                                    <p className="text-xs text-gray-500 mt-1 m-0 leading-snug">{umkm.alamat}</p>
+                                </div> 
                             </div>
                         </Popup>
                     </Marker>

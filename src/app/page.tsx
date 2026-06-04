@@ -21,6 +21,8 @@ interface UMKM {
   kategori: string;
   alamat: string;
   koordinat: [number, number];
+  foto?: string;
+  deskripsi?: string;
 }
 
 export default function PetaUMKMPage() {
@@ -36,7 +38,9 @@ export default function PetaUMKMPage() {
     kategori: "Kuliner",
     alamat: "",
     lat:"",
-    lng: ""
+    lng: "",
+    foto: "",
+    deskripsi: "" 
   });
   const [koordinatUserGlobal, setKoordinatUserGlobal] = useState<[number, number] | null>(null); 
   const [modaTransportasi, setModaTransportasi] = useState<string>("driving"); // Moda transportasi
@@ -68,7 +72,9 @@ export default function PetaUMKMPage() {
         nama: formInput.nama,
         kategori: formInput.kategori,
         alamat: formInput.alamat,
-        koordinat: [parseFloat(formInput.lat), parseFloat(formInput.lng)]
+        koordinat: [parseFloat(formInput.lat), parseFloat(formInput.lng)],
+        foto: formInput.foto,
+        deskripsi: formInput.deskripsi
       };
 
       const respons = await fetch('/api/umkm', {
@@ -81,7 +87,7 @@ export default function PetaUMKMPage() {
         const dataBaru = await respons.json();
         setDataUMKM([dataBaru, ...dataUMKM]);
         setTampilForm(false);
-        setFormInput({ nama: "", kategori: "Kuliner", alamat: "", lat: "", lng: "" });
+        setFormInput({ nama: "", kategori: "Kuliner", alamat: "", lat: "", lng: "", foto: "", deskripsi: "" });
       } else {
         alert("❗ Gagal menyimpan data ke database!");
       }
@@ -163,6 +169,28 @@ export default function PetaUMKMPage() {
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Longitude</label>
                     <input required type="number" step="any" className="w-full p-2 border rounded text-sm bg-white text-black" placeholder="106.789" value={formInput.lng} onChange={(e) => setFormInput({...formInput, lng: e.target.value})} />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">URL Foto (Link Gambar)</label>
+                  <input
+                    type="url"
+                    className="w-full p-2 border rounded bg-white text-black text-sm"
+                    placeholder="https://contoh.com/gamabar.jpg"
+                    value={formInput.foto}
+                    onChange={(e) => setFormInput({...formInput, foto: e.target.value})}
+                    />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Deskripsi Singkat</label>
+                  <textarea
+                    className="w-full p-2 border rounded bg-white text-black text-sm"
+                    rows={3}
+                    placeholder="Contoh: Jual soto mie khas Bogor dengan harga terjangkau."
+                    value={formInput.deskripsi}
+                    onChange={(e) => setFormInput({...formInput, deskripsi: e.target.value})}
+                    />
                 </div>
 
                 <button 
@@ -257,30 +285,47 @@ export default function PetaUMKMPage() {
                           onClick={() => setKoordinatZoom(umkm.koordinat)}
                           className={`p-4 border rounded-xl cursor-pointer transition-all shadow-sm ${apakahSedangDipilih ? "bg-blue-50 border-blue-500 ring-2 ring-blue-100" : "bg-white border-gray-200 hover:bg-gray-50 hover:border-blue-300"}`}
                         >
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-bold text-blue-800">{umkm.nama}</h3>
-
-                            {/* Tampilkan jarak meluncur jika GPS aktif */}
-                            {jarakKeToko !== null && (
-                              <div>
-                                <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full animate-fade-in">
-                                  🚗 {jarakKeToko} Km
-                                </span>
-                                {/* Estmasi Waktu Tempuh */}
-                                {estimasiWaktu[umkm._id] && (
-                                  <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                                    ⏱️ {estimasiWaktu[umkm._id]}
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0 mt-1">
+                              <img 
+                                src={umkm.foto || "https://placehold.co/150x150/e2e8f0/475569?text=Tanpa+Foto"}
+                                alt={umkm.nama}
+                                className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-sm"
+                              />
+                            </div>
                           </div>
 
-                          {/* PERBAIKAN: Ditambahkan strip pada text-blue-700 */}
+                          <div>
+                            <div className="flex justify-between items-start">
+                              <h3 className="font-bold text-blue-800">{umkm.nama}</h3>
+
+                              {/* Tampilkan jarak meluncur jika GPS aktif */}
+                              {jarakKeToko !== null && (
+                                <div>
+                                  <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full animate-fade-in">
+                                    🚗 {jarakKeToko} Km
+                                  </span>
+                                  {/* Estmasi Waktu Tempuh */}
+                                  {estimasiWaktu[umkm._id] && (
+                                    <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                      ⏱️ {estimasiWaktu[umkm._id]}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Kategori UMKM */}
                           <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded mt-1 uppercase">
                             {umkm.kategori}
                           </span>
-                          <p className="text-sm text-gray-600 mt-2">
+                          {/* Deskripsi UMKM */}
+                          {umkm.deskripsi && (
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-1 italic">"{umkm.deskripsi}"</p>
+                          )}
+                          {/* Alamat UMKM */}
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                             {umkm.alamat}
                           </p>
                         </div>
