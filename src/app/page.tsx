@@ -42,6 +42,7 @@ export default function PetaUMKMPage() {
     foto: "",
     deskripsi: "" 
   });
+  const [fileGambar, setFileGambar] = useState<File | null>(null);
   const [koordinatUserGlobal, setKoordinatUserGlobal] = useState<[number, number] | null>(null); 
   const [modaTransportasi, setModaTransportasi] = useState<string>("driving"); // Moda transportasi
   const [estimasiWaktu,setEstimasiWaktu] = useState<{ [key: string]: string }>({}); // Estimasi waktu tempuh
@@ -68,12 +69,32 @@ export default function PetaUMKMPage() {
     setLoadingSubmit(true);
 
     try {
+      let urlFotoCloudinary = formInput.foto;
+
+      if (fileGambar) {
+        const formData = new FormData();
+        formData.append('file', fileGambar);
+
+        const responsUpload = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (responsUpload.ok) {
+          const dataUpload = await responsUpload.json();
+          urlFotoCloudinary = dataUpload.url;
+        } else {
+          alert("❗ Gagal mengunggah gambar ke Cloudinary!");
+          setLoadingSubmit(false);
+          return;
+        }
+      }
       const dataKirim = {
         nama: formInput.nama,
         kategori: formInput.kategori,
         alamat: formInput.alamat,
         koordinat: [parseFloat(formInput.lat), parseFloat(formInput.lng)],
-        foto: formInput.foto,
+        foto: urlFotoCloudinary,
         deskripsi: formInput.deskripsi
       };
 
@@ -88,6 +109,7 @@ export default function PetaUMKMPage() {
         setDataUMKM([dataBaru, ...dataUMKM]);
         setTampilForm(false);
         setFormInput({ nama: "", kategori: "Kuliner", alamat: "", lat: "", lng: "", foto: "", deskripsi: "" });
+        setFileGambar(null);
       } else {
         alert("❗ Gagal menyimpan data ke database!");
       }
@@ -139,12 +161,12 @@ export default function PetaUMKMPage() {
               // --- Tampilan Formulir ---
               <form onSubmit={tanganiSubmit} className="space-y-4 bg-gray-50 p-4 rounded-xl border">
                 <h2 className="font-bold text-lg text-gray-700 border-b pb-2">Data UMKM Baru</h2>
-
+                {/* Input Nama UMKM */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Nama UMKM</label>
                   <input required type="text" className="w-full p-2 border rounded bg-white text-black" value={formInput.nama} onChange={(e) => setFormInput({...formInput, nama: e.target.value})} />
                 </div>
-                
+                {/* Input Kategori UMKM */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Kategori</label>
                   <select className="w-full p-2 border rounded bg-white text-black" value={formInput.kategori} onChange={(e) => setFormInput({...formInput, kategori: e.target.value})}>
@@ -154,12 +176,15 @@ export default function PetaUMKMPage() {
                     <option value="Jasa">Jasa</option>
                   </select>
                 </div>
-
+                {/* Input Alamat UMKM */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Alamat Lengkap</label>
                   <textarea required className="w-full p-2 border rounded bg-white text-black" rows={2} value={formInput.alamat} onChange={(e) => setFormInput({...formInput, alamat: e.target.value})} />
                 </div>
-
+                {/* Input Koordinat UMKM */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Koordinat</label>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Latitude</label>
@@ -170,18 +195,21 @@ export default function PetaUMKMPage() {
                     <input required type="number" step="any" className="w-full p-2 border rounded text-sm bg-white text-black" placeholder="106.789" value={formInput.lng} onChange={(e) => setFormInput({...formInput, lng: e.target.value})} />
                   </div>
                 </div>
-
+                  {/* Input Foto UMKM */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">URL Foto (Link Gambar)</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Unggah Foto Toko (Opsional)</label>
                   <input
-                    type="url"
-                    className="w-full p-2 border rounded bg-white text-black text-sm"
-                    placeholder="https://contoh.com/gamabar.jpg"
-                    value={formInput.foto}
-                    onChange={(e) => setFormInput({...formInput, foto: e.target.value})}
+                    type="file"
+                    accept="image/png, image/jpeg, image/jpg"
+                    className="w-full p-1.5 border rounded bg-white text-black text-sm file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setFileGambar(e.target.files[0]);
+                      }
+                    }}
                     />
                 </div>
-
+                {/* Input Deskripsi Singkat */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Deskripsi Singkat</label>
                   <textarea
