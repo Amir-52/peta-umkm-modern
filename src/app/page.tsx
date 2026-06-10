@@ -42,6 +42,7 @@ export default function PetaUMKMPage() {
     foto: "",
     deskripsi: "" 
   });
+  const [idYangDiedit, setIdYangDiedit] = useState<string | null>(null);
   const [fileGambar, setFileGambar] = useState<File | null>(null);
   const [koordinatUserGlobal, setKoordinatUserGlobal] = useState<[number, number] | null>(null); 
   const [modaTransportasi, setModaTransportasi] = useState<string>("driving"); // Moda transportasi
@@ -89,7 +90,7 @@ export default function PetaUMKMPage() {
           return;
         }
       }
-      const dataKirim = {
+      const dataKirim: any = {
         nama: formInput.nama,
         kategori: formInput.kategori,
         alamat: formInput.alamat,
@@ -98,16 +99,33 @@ export default function PetaUMKMPage() {
         deskripsi: formInput.deskripsi
       };
 
-      const respons = await fetch('/api/umkm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json'},
-        body: JSON.stringify(dataKirim),
-      });
+      let respons;
+
+      if (idYangDiedit) {
+        dataKirim._id = idYangDiedit;
+        respons = await fetch('/api/umkm', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(dataKirim),
+        });
+      } else {
+        respons = await fetch('/api/umkm', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(dataKirim),
+        });
+      }
 
       if (respons.ok) {
-        const dataBaru = await respons.json();
-        setDataUMKM([dataBaru, ...dataUMKM]);
+        alert(idYangDiedit ? "✅ Data berhasil diperbarui!" : "✅ Data berhasil disimpan!");
+        ambilDataDatabase();
+
         setTampilForm(false);
+        setIdYangDiedit(null);
         setFormInput({ nama: "", kategori: "Kuliner", alamat: "", lat: "", lng: "", foto: "", deskripsi: "" });
         setFileGambar(null);
       } else {
@@ -117,6 +135,41 @@ export default function PetaUMKMPage() {
       console.log("Terjadi kesalahan:", error);
     } finally {
       setLoadingSubmit(false);
+    }
+  };
+
+  const tanganiEdit = (umkm: UMKM) => {
+
+    setTampilForm(true);
+    setIdYangDiedit(umkm._id);
+    
+    setFormInput({
+      nama: umkm.nama,
+      kategori: umkm.kategori,
+      alamat: umkm.alamat,
+      lat: umkm.koordinat[0].toString(), 
+      lng: umkm.koordinat[1].toString(),
+      foto: umkm.foto || "",
+      deskripsi: umkm.deskripsi || ""
+    });
+    
+    setFileGambar(null); 
+  };
+
+  const tanganiHapus = async (id: string) => {
+    try {
+      const respons = await fetch(`/api/umkm?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (respons.ok) {
+        const dataTerbaru = dataUMKM.filter((umkm) => umkm._id !== id);
+        setDataUMKM(dataTerbaru);
+      } else {
+        alert("❗ Gagal menghapus data!");
+      }
+    } catch (error) {
+      console.error("Terjadi kesalahan saat menghapus data:", error);
     }
   };
 
@@ -153,7 +206,13 @@ export default function PetaUMKMPage() {
           <section className="w-1/3 bg-white border-r overflow-y-auto p-4 flex flex-col">
 
             {/* Tombol Toggle Form */}
-            <button onClick={() => setTampilForm(!tampilForm)} className="w-full mb-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors shadow-md">
+            <button onClick={() => {
+              setTampilForm(!tampilForm);
+              setIdYangDiedit(null);
+              setFormInput({
+                nama: "", kategori: "Kuliner", alamat: "", lat: "", lng: "", foto: "", deskripsi: "" });
+              }}
+              className="w-full mb-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors shadow-md">
               {tampilForm ? "Kembali ke Daftar UMKM" : "➕ Tambah UMKM Baru"}
             </button>
 
@@ -356,6 +415,27 @@ export default function PetaUMKMPage() {
                           <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                             {umkm.alamat}
                           </p>
+
+                          <div className="flex gap-2 mt-3">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                tanganiEdit(umkm);
+                              }}
+                              className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-semibold rounded hover:bg-blue-100 border border-blue-200 transition-colors"
+                            >
+                             ⚙️ Edit
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                tanganiHapus(umkm._id);
+                              }}
+                              className="px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded hover:bg-red-100 border border-red-200 transition-colors"
+                            >
+                              🗑️ Hapus
+                            </button>
+                          </div>
                         </div>
                       );
                     })
