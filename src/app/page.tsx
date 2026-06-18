@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { hitungJarak } from '@/lib/jarak';
+import toast, { Toaster } from 'react-hot-toast';
 
 const PetaInteraktif = dynamic(() => import('@/components/Map'), 
   { 
@@ -61,6 +62,26 @@ export default function PetaUMKMPage() {
     }
   };
 
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  const tanganiLogin = () => {
+    if (isAdmin) {
+      setIsAdmin(false);
+      setTampilForm(false);
+      setIdYangDiedit(null);
+      toast.success("Berhasil logout!");
+    } else {
+      const passwordMasuk = window.prompt("Masukkan Password Admin");
+
+      if (passwordMasuk === "admin123") {
+        setIsAdmin(true);
+        toast.success("Selamat datang, Admin!");
+      } else if (passwordMasuk !== null) {
+        toast.error("Password salah!");
+      }
+    }
+  };
+
   useEffect(() => {
     ambilDataDatabase();
   }, []);
@@ -85,7 +106,7 @@ export default function PetaUMKMPage() {
           const dataUpload = await responsUpload.json();
           urlFotoCloudinary = dataUpload.url;
         } else {
-          alert("❗ Gagal mengunggah gambar ke Cloudinary!");
+          toast.error("❗ Gagal mengunggah gambar ke Cloudinary!");
           setLoadingSubmit(false);
           return;
         }
@@ -121,7 +142,7 @@ export default function PetaUMKMPage() {
       }
 
       if (respons.ok) {
-        alert(idYangDiedit ? "✅ Data berhasil diperbarui!" : "✅ Data berhasil disimpan!");
+        toast.success(idYangDiedit ? "✅ Data berhasil diperbarui!" : "✅ Data berhasil disimpan!");
         ambilDataDatabase();
 
         setTampilForm(false);
@@ -129,9 +150,10 @@ export default function PetaUMKMPage() {
         setFormInput({ nama: "", kategori: "Kuliner", alamat: "", lat: "", lng: "", foto: "", deskripsi: "" });
         setFileGambar(null);
       } else {
-        alert("❗ Gagal menyimpan data ke database!");
+        toast.error("❗ Gagal menyimpan data ke database!");
       }
     } catch (error) {
+      toast.error("❗ Terjadi kesalahan!");
       console.log("Terjadi kesalahan:", error);
     } finally {
       setLoadingSubmit(false);
@@ -166,7 +188,7 @@ export default function PetaUMKMPage() {
         const dataTerbaru = dataUMKM.filter((umkm) => umkm._id !== id);
         setDataUMKM(dataTerbaru);
       } else {
-        alert("❗ Gagal menghapus data!");
+        toast.error("❗ Gagal menghapus data!");
       }
     } catch (error) {
       console.error("Terjadi kesalahan saat menghapus data:", error);
@@ -193,28 +215,39 @@ export default function PetaUMKMPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      <Toaster position="top-center" reverseOrder={false} />
       <main className="flex flex-col h-screen bg-gray-50">
         {/* Header */}
         <nav className="bg-blue-700 text-white p-4 shadow-lg z-10">
           <h1 className="text-xl font-bold">📍 Peta UMKM Bogor Modern</h1>
+
+          <button
+            onClick={tanganiLogin}
+            className="text-xs bg-bleu-800 hover:bg-blue-900 px-3 py-1.5 rounded-lg border border-blue-600 transition-colors shadow-sm font-semibold"
+          >
+              {isAdmin ? "🔓 Logout Admin" : "🔒 Login Admin"}
+            </button>
         </nav>
 
         {/* Konten Utama */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col-reverse md:flex-row flex-1 overflow-hidden">
           
           {/* Kolom Kiri: Daftar UMKM */}
-          <section className="w-1/3 bg-white border-r overflow-y-auto p-4 flex flex-col">
+          <section className="w-full md:w-1/3 h-1/2 md:h-full bg-white border-t md:border-t-0 md:border-r overflow-y-auto p-4 flex flex-col">
 
-            {/* Tombol Toggle Form */}
-            <button onClick={() => {
-              setTampilForm(!tampilForm);
-              setIdYangDiedit(null);
-              setFormInput({
-                nama: "", kategori: "Kuliner", alamat: "", lat: "", lng: "", foto: "", deskripsi: "" });
-              }}
-              className="w-full mb-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors shadow-md">
-              {tampilForm ? "Kembali ke Daftar UMKM" : "➕ Tambah UMKM Baru"}
-            </button>
+            {/* Tombol Toggle Form - Hanya untuk Admin */}
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setTampilForm(!tampilForm);
+                  setIdYangDiedit(null);
+                  setFormInput({
+                    nama: "", kategori: "Kuliner", alamat: "", lat: "", lng: "", foto: "", deskripsi: "" });
+                }}
+                className="w-full mb-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors shadow-md">
+                {tampilForm ? "Kembali ke Daftar UMKM" : "➕ Tambah UMKM Baru"}
+              </button>
+            )}
 
             {tampilForm ? (
               // --- Tampilan Formulir ---
@@ -415,28 +448,29 @@ export default function PetaUMKMPage() {
                           <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                             {umkm.alamat}
                           </p>
-
-                          <div className="flex gap-2 mt-3">
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                tanganiEdit(umkm);
-                              }}
-                              className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-semibold rounded hover:bg-blue-100 border border-blue-200 transition-colors"
-                            >
-                             ⚙️ Edit
-                            </button>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                tanganiHapus(umkm._id);
-                              }}
-                              className="px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded hover:bg-red-100 border border-red-200 transition-colors"
-                            >
-                              🗑️ Hapus
-                            </button>
-                          </div>
-                        </div>
+                          {isAdmin && (
+                            <div className="flex gap-2 mt-3">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  tanganiEdit(umkm);
+                                }}
+                                className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-semibold rounded hover:bg-blue-100 border border-blue-200 transition-colors"
+                              >
+                              ⚙️ Edit
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  tanganiHapus(umkm._id);
+                                }}
+                                className="px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded hover:bg-red-100 border border-red-200 transition-colors"
+                              >
+                                🗑️ Hapus
+                              </button>
+                            </div>
+                          )}
+                        </div> 
                       );
                     })
                   )}
@@ -446,7 +480,7 @@ export default function PetaUMKMPage() {
           </section>
 
           {/* Kolom Kanan: Area Peta */}
-          <section className="w-2/3 bg-blue-50 relative z-0">
+          <section className="w-full md:w-2/3 h-1/2 md:h-full bg-blue-50 relative z-0">
             <PetaInteraktif data={dataDifilter} koordinatZoom={koordinatZoom} 
             onKirimLokasiKeHomePage={(koordinat) => setKoordinatUserGlobal(koordinat)}
             moda={modaTransportasi}
